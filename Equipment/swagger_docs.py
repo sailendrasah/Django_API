@@ -9,7 +9,10 @@ OPENAPI_SPEC = {
         "description": "User registration, authentication, profile, and password endpoints.",
     },
     "security": [{"BearerAuth": []}],
-    "tags": [{"name": "auth"}],
+    "tags": [
+        {"name": "auth"},
+        {"name": "equipment", "description": "Equipment listing endpoints."},
+    ],
     "paths": {
         "/register/": {
             "post": {
@@ -148,21 +151,92 @@ OPENAPI_SPEC = {
         },
         "/delete/": {
             "delete": {
-                "operationId": "deleteUser",
-                "summary": "Delete a user by email",
-                "tags": ["auth"],
-                "security": [],
+                "operationId": "deleteEquipment",
+                "summary": "Delete equipment owned by the authenticated seller",
+                "tags": ["equipment"],
                 "requestBody": {
                     "required": True,
                     "content": {
                         "application/json": {
-                            "schema": {"$ref": "#/components/schemas/EmailRequest"}
+                            "schema": {
+                                "$ref": "#/components/schemas/EquipmentDeleteRequest"
+                            }
                         }
                     },
                 },
                 "responses": {
-                    "200": {"description": "User deleted"},
-                    "400": {"description": "User not found"},
+                    "200": {"description": "Equipment deleted"},
+                    "400": {"description": "Equipment ID is required or token format is invalid"},
+                    "401": {"description": "Missing or invalid bearer token"},
+                    "404": {"description": "Seller not found"},
+                    "405": {"description": "Invalid request method"},
+                },
+            }
+        },
+        "/equipment_register/": {
+            "post": {
+                "operationId": "registerEquipment",
+                "summary": "Register equipment for the authenticated seller",
+                "tags": ["equipment"],
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EquipmentRegisterRequest"
+                            }
+                        }
+                    },
+                },
+                "responses": {
+                    "201": {"description": "Equipment registered"},
+                    "400": {"description": "Invalid request or equipment details"},
+                    "401": {"description": "Missing or invalid bearer token"},
+                    "404": {"description": "Seller not found"},
+                },
+            }
+        },
+        "/Equipment_update/": {
+            "put": {
+                "operationId": "updateEquipment",
+                "summary": "Update equipment owned by the authenticated seller",
+                "tags": ["equipment"],
+                "security": [{"BearerAuth": []}],
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EquipmentUpdateRequest"
+                            },
+                            "example": {
+                                "equipment_id": "507f1f77bcf86cd799439011",
+                                "name_equipment": "Updated equipment name",
+                                "available_from": "2026-10-12",
+                                "available_to": "2026-10-20",
+                            },
+                        }
+                    },
+                },
+                "responses": {
+                    "200": {"description": "Equipment updated"},
+                    "400": {"description": "Invalid request or date range"},
+                    "401": {"description": "Missing or invalid bearer token"},
+                    "404": {"description": "Seller or equipment not found"},
+                    "405": {"description": "Invalid request method"},
+                },
+            }
+        },
+        "/get_equipment/": {
+            "get": {
+                "operationId": "getEquipment",
+                "summary": "Get all equipment",
+                "tags": ["equipment"],
+                "security": [{"BearerAuth": []}],
+                "responses": {
+                    "200": {"description": "Equipment list fetched; data is an array"},
+                    "401": {"description": "Missing or invalid bearer token"},
+                    "405": {"description": "Invalid request method"},
                 },
             }
         },
@@ -174,10 +248,15 @@ OPENAPI_SPEC = {
         "schemas": {
             "RegisterRequest": {
                 "type": "object",
-                "required": ["name", "email", "password"],
+                "required": ["name", "email", "phone", "role", "password"],
                 "properties": {
                     "name": {"type": "string"},
                     "email": {"type": "string", "format": "email"},
+                    "phone": {"type": "string"},
+                    "role": {
+                        "type": "string",
+                        "enum": ["USER", "EQUIPMENT_OWNER"],
+                    },
                     "password": {"type": "string", "format": "password"},
                 },
             },
@@ -221,6 +300,53 @@ OPENAPI_SPEC = {
                     "otp": {"type": "integer"},
                     "is_verified": {"type": "boolean"},
                 },
+            },
+            "EquipmentRegisterRequest": {
+                "type": "object",
+                "required": [
+                    "name_equipment",
+                    "description",
+                    "brand",
+                    "model",
+                    "duration",
+                    "price_per_day",
+                    "avaliable_from",
+                    "available_to",
+                ],
+                "properties": {
+                    "name_equipment": {"type": "string"},
+                    "description": {"type": "string"},
+                    "brand": {"type": "string"},
+                    "model": {"type": "string"},
+                    "duration": {"type": "string"},
+                    "status": {
+                        "type": "string",
+                        "enum": ["AVAILABLE", "BOOKED", "UNAVAILABLE"],
+                    },
+                    "price_per_day": {"type": "number", "format": "decimal"},
+                    "avaliable_from": {"type": "string", "format": "date"},
+                    "available_to": {"type": "string", "format": "date"},
+                },
+            },
+            "EquipmentUpdateRequest": {
+                "type": "object",
+                "required": ["equipment_id"],
+                "properties": {
+                    "equipment_id": {"type": "string"},
+                    "name_equipment": {"type": "string"},
+                    "description": {"type": "string"},
+                    "brand": {"type": "string"},
+                    "model": {"type": "string"},
+                    "duration": {"type": "string"},
+                    "price_per_day": {"type": "number", "format": "decimal"},
+                    "available_from": {"type": "string", "format": "date"},
+                    "available_to": {"type": "string", "format": "date"},
+                },
+            },
+            "EquipmentDeleteRequest": {
+                "type": "object",
+                "required": ["equipment_id"],
+                "properties": {"equipment_id": {"type": "string"}},
             },
         },
     },
